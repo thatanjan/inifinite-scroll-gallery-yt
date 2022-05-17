@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { nanoid } from 'nanoid'
 import {
 	Heading,
@@ -12,34 +12,25 @@ import {
 	Image,
 	Flex,
 	Box,
+	Typography,
 } from '@chakra-ui/react'
 import Masonry from 'react-masonry-css'
 import axios from 'axios'
 import InfiniteScroll from 'react-infinite-scroll-component'
 
-const searchImage = async ({ page = 1, query = 'female' }) => {
-	const client_id = 'YzB-US8BfDu1ZymAvYvLOeX9T1Zn8h1tgDNoERPHbUo'
+const searchImage = async ({ setPage, page = 1, query = 'female' }) => {
+	const { data } = await axios.get('/api/getPhotos', { params: { query, page } })
 
-	const { data } = await axios.get('https://api.unsplash.com/search/photos', {
-		params: {
-			page,
-			query,
-			client_id,
-		},
-	})
+	setPage((prev) => prev + 1)
 
-	const { results } = data
-
-	if (results.length < 10) setHasMore(false)
-
-	return results.map((image) => image.urls.small)
+	return data
 }
 
-const SearchForm = ({ page, setImages, query, setQuery }) => {
+const SearchForm = ({ page, setImages, query, setQuery, setPage }) => {
 	const handleSubmit = async (e) => {
 		e.preventDefault()
 
-		const images = await searchImage({ query, page })
+		const images = await searchImage({ setPage, query, page })
 		setImages(images)
 	}
 
@@ -104,9 +95,7 @@ const Images = ({ images }) => {
 const fetchNextImages =
 	({ page, query, setImages, setPage, setHasMore }) =>
 	async () => {
-		const images = await searchImage({ page, query })
-
-		setPage((prev) => prev + 1)
+		const images = await searchImage({ setPage, page, query })
 
 		setImages((prev) => prev.concat(images))
 
@@ -117,6 +106,10 @@ const Loader = () => (
 	<Flex justifyContent='center' py='2rem'>
 		<Spinner size='xl' />
 	</Flex>
+)
+
+const EndMessage = () => (
+	<Typography variant='h3'>No more images to show</Typography>
 )
 
 const Home = () => {
@@ -130,12 +123,20 @@ const Home = () => {
 		query,
 		setQuery,
 		setImages,
+		setPage,
 	}
+
+	const ref = useRef(0)
+
+	useEffect(() => {
+		ref.current++
+		console.log('rendered', ref.current)
+	}, [query])
 
 	return (
 		<Box w='90%' m='0 auto'>
 			<Heading align='center' py='10' fontSize='5xl'>
-				UnLash
+				Pixels
 			</Heading>
 
 			<SearchForm {...searchFormProps} />
@@ -145,6 +146,7 @@ const Home = () => {
 				hasMore={hasMore}
 				next={fetchNextImages({ page, query, setImages, setPage, setHasMore })}
 				loader={<Loader />}
+				endMessage={EndMessage}
 			>
 				<Images images={images} />
 			</InfiniteScroll>
