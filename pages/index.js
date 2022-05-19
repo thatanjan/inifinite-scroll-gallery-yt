@@ -1,105 +1,24 @@
-import React, { useState, useEffect, useRef } from 'react'
-import { nanoid } from 'nanoid'
-import {
-	Heading,
-	Spinner,
-	FormControl,
-	FormLabel,
-	FormErrorMessage,
-	FormHelperText,
-	Input,
-	Button,
-	Image,
-	Flex,
-	Box,
-	Typography,
-} from '@chakra-ui/react'
-import Masonry from 'react-masonry-css'
-import axios from 'axios'
+import React, { useState } from 'react'
+import { Heading, Spinner, Flex, Box } from '@chakra-ui/react'
 import InfiniteScroll from 'react-infinite-scroll-component'
 
-const searchImage = async ({ setPage, page = 1, query = 'female' }) => {
-	const { data } = await axios.get('/api/getPhotos', { params: { query, page } })
+import Images from '../components/Images'
+import SearchForm from '../components/SearchForm'
 
-	setPage((prev) => prev + 1)
-
-	return data
-}
-
-const SearchForm = ({ page, setImages, query, setQuery, setPage }) => {
-	const handleSubmit = async (e) => {
-		e.preventDefault()
-
-		const images = await searchImage({ setPage, query, page })
-		setImages(images)
-	}
-
-	const handleChange = (e) => {
-		const { value } = e.target
-		setQuery(value)
-	}
-
-	return (
-		<FormControl as='form' onSubmit={handleSubmit} maxW='40rem' mx='auto'>
-			<Input
-				isRequired
-				placeholder='Search Photos'
-				onChange={handleChange}
-				mb='.5rem'
-			/>
-
-			<Button type='submit' w='100%'>
-				Search
-			</Button>
-		</FormControl>
-	)
-}
-
-const Images = ({ images }) => {
-	const breakpointColumnsObj = {
-		default: 3,
-		1500: 2,
-		800: 1,
-	}
-
-	const columnClassName = 'my-masonry-grid_column'
-
-	const selector = `& .${columnClassName}`
-
-	const gutterSpace = '30px'
-
-	const masonryStyles = {
-		ml: `-${gutterSpace}`,
-	}
-
-	masonryStyles[selector] = {
-		pl: gutterSpace,
-		backgroundClip: 'padding-box',
-	}
-
-	return (
-		<Flex
-			as={Masonry}
-			columnClassName={columnClassName}
-			breakpointCols={breakpointColumnsObj}
-			sx={masonryStyles}
-			mt='2rem'
-		>
-			{images.map((image) => {
-				return <Image alt='' w='100%' mb={gutterSpace} src={image} key={nanoid()} />
-			})}
-		</Flex>
-	)
-}
+import searchImage from '../utils/searchImage'
+import { getQuery } from '../utils/cookies'
 
 const fetchNextImages =
-	({ page, query, setImages, setPage, setHasMore }) =>
+	({ page, setImages, setPage, setHasMore }) =>
 	async () => {
-		const images = await searchImage({ setPage, page, query })
+		const images = await searchImage({
+			setPage,
+			page,
+			query: getQuery(),
+			setHasMore,
+		})
 
 		setImages((prev) => prev.concat(images))
-
-		if (images.length < 10) setHasMore(false)
 	}
 
 const Loader = () => (
@@ -109,29 +28,22 @@ const Loader = () => (
 )
 
 const EndMessage = () => (
-	<Typography variant='h3'>No more images to show</Typography>
+	<Heading as='h3' fontSize='2xl' py='2rem' align='center'>
+		No more images
+	</Heading>
 )
 
 const Home = () => {
 	const [images, setImages] = useState([])
 
-	const [query, setQuery] = useState('')
 	const [page, setPage] = useState(1)
-	const [hasMore, setHasMore] = useState(true)
+	const [hasMore, setHasMore] = useState(false)
 
 	const searchFormProps = {
-		query,
-		setQuery,
 		setImages,
 		setPage,
+		setHasMore,
 	}
-
-	const ref = useRef(0)
-
-	useEffect(() => {
-		ref.current++
-		console.log('rendered', ref.current)
-	}, [query])
 
 	return (
 		<Box w='90%' m='0 auto'>
@@ -144,9 +56,9 @@ const Home = () => {
 			<InfiniteScroll
 				dataLength={images.length}
 				hasMore={hasMore}
-				next={fetchNextImages({ page, query, setImages, setPage, setHasMore })}
+				next={fetchNextImages({ page, setImages, setPage, setHasMore })}
 				loader={<Loader />}
-				endMessage={EndMessage}
+				endMessage={<EndMessage />}
 			>
 				<Images images={images} />
 			</InfiniteScroll>

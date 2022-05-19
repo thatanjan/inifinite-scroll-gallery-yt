@@ -1,7 +1,6 @@
 import pexels from '../../utils/pexels'
 
 const handler = async (req, res) => {
-	console.log(req.cookies)
 	const {
 		query: { query, page },
 		method,
@@ -13,7 +12,7 @@ const handler = async (req, res) => {
 
 	const result = await pexels.photos.search({ query, page })
 
-	const photos = result.photos.map((photo) => photo.src.medium)
+	const photos = result.photos.map((photo) => photo.src.large)
 
 	return res.send(photos)
 }
